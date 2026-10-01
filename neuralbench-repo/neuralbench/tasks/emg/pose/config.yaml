@@ -40,7 +40,7 @@ data:
     baseline: null
     # mne returns SI volts (BDF stores uV); emg2pose trains on the raw HDF5 values in uV.
     # At volt scale VEMG2Pose's first LayerNorm (eps=1e-5) erases the signal.
-    scale_factor: 1.0e6
+    scale_factor: 1.0e+6
     scaler: null
     clamp: null
     infra:
