@@ -91,8 +91,8 @@ def test_emg_pose_neuro_extractor_uses_microvolt_scale() -> None:
         models=["vemg2pose"],
         datasets=None,
     )
-    data = Data(**configs[0]["data"])
-    assert data.neuro.scale_factor == 1.0e6
+    flat = configs[0].flat()
+    assert flat["data.neuro.scale_factor"] == 1.0e6
 
 
 @pytest.mark.parametrize("cluster", [None, "auto", "slurm"])
