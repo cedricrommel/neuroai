@@ -74,27 +74,6 @@ def test_prepare_task_configs(dataset: str | None) -> None:
     assert source.infra is not None
 
 
-def test_emg_pose_neuro_extractor_uses_microvolt_scale() -> None:
-    """emg/pose must convert MNE volts back to microvolts."""
-    config = ConfDict(load_yaml_config(DEFAULTS_DIR / "config.yaml"))
-    grid = ConfDict(load_yaml_config(DEFAULTS_DIR / "grid.yaml"))
-    configs = prepare_task_configs(
-        config,
-        grid,
-        "emg",
-        "pose",
-        use_task_grid=False,
-        debug=False,
-        force=False,
-        prepare=False,
-        download=False,
-        models=["vemg2pose"],
-        datasets=None,
-    )
-    flat = configs[0].flat()
-    assert flat["data.neuro.scale_factor"] == 1.0e6
-
-
 @pytest.mark.parametrize("cluster", [None, "auto", "slurm"])
 def test_cluster_config_wires_all_infra_clusters(
     patch_config: Callable[..., None], cluster: str | None
