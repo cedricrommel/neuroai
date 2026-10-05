@@ -5,10 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import inspect
-import json
 import logging
 import typing as tp
-from pathlib import Path
 
 import lightning.pytorch as pl
 import torch
@@ -90,6 +88,8 @@ class BrainModule(pl.LightningModule):
                 test_full_retrieval_metrics,
                 split_names=["test/full_retrieval"],
             )
+        # Filled by ``_log_grouped_metric`` and persisted by callback code.
+        self.grouped_metric_values: dict[str, dict[str, float]] = {}
 
     def _infer_forward_params(self, model: nn.Module) -> None:
         """Check which additional inputs the model's forward method requires."""
@@ -271,21 +271,6 @@ class BrainModule(pl.LightningModule):
                 else:
                     self.log(metric_name, metric, prog_bar=True)
 
-    def _save_grouped_metric_values(
-        self,
-        metric_name: str,
-        grouped_values: dict[str, float],
-    ) -> None:
-        if getattr(self.trainer, "global_rank", 0) != 0:
-            return
-        # Persist under the run directory so per-subject values remain available
-        # from cached runs while avoiding one logged key per subject.
-        output_dir = Path(self.trainer.default_root_dir) / "per_subject_metrics"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        filename = metric_name.replace("/", "__") + ".json"
-        with (output_dir / filename).open("w", encoding="utf-8") as f:
-            json.dump(grouped_values, f, sort_keys=True, indent=2)
-
     def _log_grouped_metric(
         self,
         metric_name: str,
@@ -344,7 +329,7 @@ class BrainModule(pl.LightningModule):
             sync_dist=False,
             rank_zero_only=self.trainer.world_size > 1,
         )
-        self._save_grouped_metric_values(metric_name, grouped_values)
+        self.grouped_metric_values[metric_name] = grouped_values
         grouped_metric.reset()
 
     def on_validation_epoch_end(self) -> None:

@@ -6,6 +6,7 @@
 
 
 import copy
+import json
 import logging
 import typing as tp
 import warnings
@@ -33,6 +34,42 @@ if tp.TYPE_CHECKING:
     from neuraltrain.utils import StandardScaler
 
 LOGGER = logging.getLogger(__name__)
+
+_GROUPED_METRICS_DIR = "per_subject_metrics"
+
+
+class GroupedMetricArtifactCollector(Callback):
+    """Persist grouped-metric dictionaries produced by ``BrainModule``.
+
+    ``BrainModule`` computes grouped metrics and stores their per-group values in
+    ``pl_module.grouped_metric_values``. This callback writes those dictionaries
+    to JSON files under ``trainer.default_root_dir/per_subject_metrics``.
+    """
+
+    @staticmethod
+    def _dump(pl_module: pl.LightningModule, trainer: pl.Trainer) -> None:
+        grouped_values = getattr(pl_module, "grouped_metric_values", {})
+        if not grouped_values:
+            return
+        output_dir = Path(trainer.default_root_dir) / _GROUPED_METRICS_DIR
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for metric_name, values in grouped_values.items():
+            filename = metric_name.replace("/", "__") + ".json"
+            with (output_dir / filename).open("w", encoding="utf-8") as f:
+                json.dump(values, f, sort_keys=True, indent=2)
+        grouped_values.clear()
+
+    def on_validation_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ) -> None:
+        if trainer.is_global_zero:
+            self._dump(pl_module, trainer)
+
+    def on_test_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ) -> None:
+        if trainer.is_global_zero:
+            self._dump(pl_module, trainer)
 
 
 class ResetPerTimeline(Callback):
