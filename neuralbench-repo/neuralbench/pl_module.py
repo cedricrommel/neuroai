@@ -304,7 +304,9 @@ class BrainModule(pl.LightningModule):
             dtype=torch.float32,
         )
         n_subjects = int(values.numel())
-        mean_value = values.mean() if n_subjects else torch.tensor(0.0, device=self.device)
+        mean_value = (
+            values.mean() if n_subjects else torch.tensor(0.0, device=self.device)
+        )
         # Use sample SD (ddof=1), matching paper-style across-subject reporting.
         std_value = (
             values.std(unbiased=True)
