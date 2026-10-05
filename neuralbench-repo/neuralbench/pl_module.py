@@ -5,10 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 import inspect
-import json
 import logging
 import typing as tp
-from pathlib import Path
 
 import lightning.pytorch as pl
 import torch
@@ -268,86 +266,7 @@ class BrainModule(pl.LightningModule):
                 and metric.update_called
                 and "confusion_matrix" not in metric_name
             ):
-                if isinstance(metric, GroupedMetric):
-                    self._log_grouped_metric(metric_name, metric)
-                else:
-                    self.log(metric_name, metric, prog_bar=True)
-
-    def _save_grouped_metric_values(
-        self,
-        metric_name: str,
-        grouped_values: dict[str, float],
-    ) -> None:
-        if getattr(self.trainer, "global_rank", 0) != 0:
-            return
-        # Persist under the run directory so per-subject values remain available
-        # from cached runs while avoiding one logged key per subject.
-        output_dir = Path(self.trainer.default_root_dir) / "per_subject_metrics"
-        output_dir.mkdir(parents=True, exist_ok=True)
-        filename = metric_name.replace("/", "__") + ".json"
-        with (output_dir / filename).open("w", encoding="utf-8") as f:
-            json.dump(grouped_values, f, sort_keys=True, indent=2)
-
-    def _log_grouped_metric(
-        self,
-        metric_name: str,
-        grouped_metric: GroupedMetric,
-    ) -> None:
-        if self.trainer.world_size > 1:
-            LOGGER.warning(
-                "GroupedMetric '%s' currently computes per-subject values per-rank; "
-                "reported aggregates are rank-local.",
-                metric_name,
-            )
-        grouped_values = grouped_metric.compute()
-        values = torch.tensor(
-            list(grouped_values.values()),
-            device=self.device,
-            dtype=torch.float32,
-        )
-        n_subjects = int(values.numel())
-        mean_value = (
-            values.mean() if n_subjects else torch.tensor(0.0, device=self.device)
-        )
-        # Use sample SD (ddof=1), matching paper-style across-subject reporting.
-        std_value = (
-            values.std(unbiased=True)
-            if n_subjects > 1
-            else torch.tensor(0.0, device=self.device)
-        )
-
-        self.log(
-            f"{metric_name}_subject_mean",
-            mean_value,
-            prog_bar=True,
-            on_step=False,
-            on_epoch=True,
-            logger=True,
-            sync_dist=False,
-            rank_zero_only=self.trainer.world_size > 1,
-        )
-        self.log(
-            f"{metric_name}_subject_std",
-            std_value,
-            prog_bar=False,
-            on_step=False,
-            on_epoch=True,
-            logger=True,
-            sync_dist=False,
-            rank_zero_only=self.trainer.world_size > 1,
-        )
-        self.log(
-            f"{metric_name}_n_subjects",
-            torch.tensor(float(n_subjects), device=self.device),
-            prog_bar=False,
-            on_step=False,
-            on_epoch=True,
-            logger=True,
-            sync_dist=False,
-            rank_zero_only=self.trainer.world_size > 1,
-        )
-        self._save_grouped_metric_values(metric_name, grouped_values)
-        grouped_metric.reset()
+                self.log(metric_name, metric, prog_bar=True)
 
     def on_validation_epoch_end(self) -> None:
         self._log_metrics("val")
