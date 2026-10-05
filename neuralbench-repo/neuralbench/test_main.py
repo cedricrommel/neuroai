@@ -18,6 +18,7 @@ from exca import TaskInfra
 from exca.cachedict import CacheDict
 from torch import nn
 from torch.utils.data import DataLoader
+from torchmetrics import Metric
 
 from neuraltrain.augmentations import BandRotationConfig
 from neuraltrain.losses import BaseLoss
@@ -111,7 +112,7 @@ def test_grouped_metric_logs_per_subject_summary_and_artifacts(
     pred = torch.tensor([0.0, 0.0, 10.0])
     true = torch.tensor([0.0, 1.0, 0.0])
     subjects = torch.tensor([0, 0, 1])
-    test_mae = module.metrics["test/test/mae"]
+    test_mae = tp.cast(Metric, module.metrics["test/test/mae"])
     test_mae.update(pred, true)
     grouped = tp.cast(GroupedMetric, module.metrics["test/test/mae_per_subject"])
     grouped.update(pred, true, subjects)
