@@ -121,12 +121,12 @@ def test_grouped_metric_logs_per_subject_summary_and_artifacts(
 
     assert "test/test/mae" in logged
     assert logged["test/test/mae"] == test_mae
-    assert logged["test/mae_per_subject_subject_mean"] == pytest.approx(5.25)
-    assert logged["test/mae_per_subject_subject_std"] == pytest.approx(6.7175144)
-    assert logged["test/mae_per_subject_n_subjects"] == 2.0
+    assert logged["test/test/mae_per_subject_subject_mean"] == pytest.approx(5.25)
+    assert logged["test/test/mae_per_subject_subject_std"] == pytest.approx(6.7175144)
+    assert logged["test/test/mae_per_subject_n_subjects"] == 2.0
 
     GroupedMetricArtifactCollector().on_test_epoch_end(module.trainer, module)
-    out_path = tmp_path / "per_subject_metrics" / "test__mae_per_subject.json"
+    out_path = tmp_path / "per_subject_metrics" / "test__test__mae_per_subject.json"
     assert out_path.exists()
     payload = json.loads(out_path.read_text())
     assert payload == {"0": 0.5, "1": 10.0}
