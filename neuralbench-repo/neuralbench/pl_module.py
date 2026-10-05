@@ -312,30 +312,35 @@ class BrainModule(pl.LightningModule):
             else torch.tensor(0.0, device=self.device)
         )
 
-        log_kwargs = {
-            "on_step": False,
-            "on_epoch": True,
-            "logger": True,
-            "sync_dist": False,
-            "rank_zero_only": self.trainer.world_size > 1,
-        }
         self.log(
             f"{metric_name}_subject_mean",
             mean_value,
             prog_bar=True,
-            **log_kwargs,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            sync_dist=False,
+            rank_zero_only=self.trainer.world_size > 1,
         )
         self.log(
             f"{metric_name}_subject_std",
             std_value,
             prog_bar=False,
-            **log_kwargs,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            sync_dist=False,
+            rank_zero_only=self.trainer.world_size > 1,
         )
         self.log(
             f"{metric_name}_n_subjects",
             torch.tensor(float(n_subjects), device=self.device),
             prog_bar=False,
-            **log_kwargs,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            sync_dist=False,
+            rank_zero_only=self.trainer.world_size > 1,
         )
         self._save_grouped_metric_values(metric_name, grouped_values)
         grouped_metric.reset()

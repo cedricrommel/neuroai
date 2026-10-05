@@ -4,9 +4,9 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
 import typing as tp
 from types import SimpleNamespace
-import json
 
 import lightning.pytorch as pl
 import numpy as np
@@ -110,14 +110,15 @@ def test_grouped_metric_logs_per_subject_summary_and_artifacts(
     pred = torch.tensor([0.0, 0.0, 10.0])
     true = torch.tensor([0.0, 1.0, 0.0])
     subjects = torch.tensor([0, 0, 1])
-    module.metrics["test/mae"].update(pred, true)
-    grouped = tp.cast(GroupedMetric, module.metrics["test/mae_per_subject"])
+    test_mae = module.metrics["test/test/mae"]
+    test_mae.update(pred, true)
+    grouped = tp.cast(GroupedMetric, module.metrics["test/test/mae_per_subject"])
     grouped.update(pred, true, subjects)
 
     module._log_metrics("test")
 
-    assert "test/mae" in logged
-    assert logged["test/mae"] == module.metrics["test/mae"]
+    assert "test/test/mae" in logged
+    assert logged["test/test/mae"] == test_mae
     assert logged["test/mae_per_subject_subject_mean"] == pytest.approx(5.25)
     assert logged["test/mae_per_subject_subject_std"] == pytest.approx(6.7175144)
     assert logged["test/mae_per_subject_n_subjects"] == 2.0
