@@ -126,6 +126,10 @@ loss:
 metrics:
   - log_name: mae
     name: MeanAbsoluteError
+  - log_name: mae_per_subject
+    name: GroupedMetric
+    kwargs:
+      metric_name: MeanAbsoluteError
   - log_name: rmse
     name: MeanSquaredError
     kwargs:

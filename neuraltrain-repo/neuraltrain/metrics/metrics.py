@@ -672,10 +672,18 @@ class GroupedMetric(torchmetrics.Metric):
         grouped_metric.reset()
     """
 
-    def __init__(self, metric_name: str, kwargs: dict[str, tp.Any] | None = None) -> None:
+    def __init__(
+        self,
+        metric_name: str | None = None,
+        kwargs: dict[str, tp.Any] | None = None,
+    ) -> None:
         super().__init__()
         if kwargs is None:
             kwargs = {}
+        if metric_name is None:
+            metric_name = kwargs.pop("metric_name", None)
+        if metric_name is None:
+            raise ValueError("GroupedMetric requires `metric_name`.")
         from neuraltrain.metrics.base import TORCHMETRICS_NAMES
 
         if metric_name in TORCHMETRICS_NAMES:

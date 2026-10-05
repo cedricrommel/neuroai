@@ -13,7 +13,7 @@ import torchmetrics
 
 from . import BaseMetric
 from .base import MeanSquaredError  # type: ignore[attr-defined]
-from .metrics import Rank, TopkAcc
+from .metrics import GroupedMetric, Rank, TopkAcc
 
 
 @pytest.fixture
@@ -68,3 +68,18 @@ def test_torchmetrics_config(kwargs: dict[str, tp.Any]) -> None:
 def test_torchmetrics_config_validation() -> None:
     with pytest.raises(TypeError):
         MeanSquaredError(log_name="blublu", kwargs={"squared": 12}).build()
+
+
+def test_grouped_metric_config_from_kwargs() -> None:
+    config = {
+        "metrics": [
+            {
+                "log_name": "mae_per_subject",
+                "name": "GroupedMetric",
+                "kwargs": {"metric_name": "MeanAbsoluteError"},
+            }
+        ]
+    }
+    trainer = Trainer(**config)  # type: ignore
+    metric = trainer.metrics[0].build()
+    assert isinstance(metric, GroupedMetric)

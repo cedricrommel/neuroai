@@ -6,12 +6,14 @@
 
 import typing as tp
 from types import SimpleNamespace
+import json
 
 import lightning.pytorch as pl
 import numpy as np
 import pandas as pd
 import pytest
 import torch
+import torchmetrics
 from exca import TaskInfra
 from exca.cachedict import CacheDict
 from torch import nn
@@ -76,6 +78,54 @@ def test_unlabelled_sequence_frames_are_masked(monkeypatch, grouped: bool) -> No
 
     assert loss.item() == 1.5, "the unlabelled frame contributes nothing"
     assert prediction[0].isnan().tolist() == [False, False, True, True, False, False]
+
+
+def test_grouped_metric_logs_per_subject_summary_and_artifacts(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    module = BrainModule(
+        model=nn.Identity(),
+        loss=nn.L1Loss(),
+        metrics={
+            "test/mae": torchmetrics.MeanAbsoluteError(),
+            "test/mae_per_subject": GroupedMetric(metric_name="MeanAbsoluteError"),
+        },
+        lightning_optimizer_config=tp.cast(LightningOptimizer, object()),
+    )
+    module._trainer = SimpleNamespace(  # type: ignore[assignment]
+        world_size=1,
+        default_root_dir=str(tmp_path),
+    )
+    logged: dict[str, tp.Any] = {}
+
+    def _capture_log(name: str, value: tp.Any, **kwargs: tp.Any) -> None:
+        del kwargs
+        if isinstance(value, torch.Tensor):
+            logged[name] = float(value.item())
+        else:
+            logged[name] = value
+
+    monkeypatch.setattr(module, "log", _capture_log)
+
+    pred = torch.tensor([0.0, 0.0, 10.0])
+    true = torch.tensor([0.0, 1.0, 0.0])
+    subjects = torch.tensor([0, 0, 1])
+    module.metrics["test/mae"].update(pred, true)
+    grouped = tp.cast(GroupedMetric, module.metrics["test/mae_per_subject"])
+    grouped.update(pred, true, subjects)
+
+    module._log_metrics("test")
+
+    assert "test/mae" in logged
+    assert logged["test/mae"] == module.metrics["test/mae"]
+    assert logged["test/mae_per_subject_subject_mean"] == pytest.approx(5.25)
+    assert logged["test/mae_per_subject_subject_std"] == pytest.approx(6.7175144)
+    assert logged["test/mae_per_subject_n_subjects"] == 2.0
+
+    out_path = tmp_path / "per_subject_metrics" / "test__mae_per_subject.json"
+    assert out_path.exists()
+    payload = json.loads(out_path.read_text())
+    assert payload == {"0": 0.5, "1": 10.0}
 
 
 def test_sequence_target_wider_than_prediction_is_reported(monkeypatch) -> None:
