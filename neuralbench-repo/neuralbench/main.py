@@ -47,7 +47,6 @@ from .aggregator import (  # noqa: F401
     BenchmarkAggregator as BenchmarkAggregator,
 )
 from .callbacks import (
-    GroupedMetricArtifactCollector,
     PlotConfusionMatrix,
     PlotRegressionScatter,
     PlotRegressionVectors,
@@ -274,7 +273,6 @@ class Experiment(BaseExperiment):
     def setup_trainer(self, is_test: bool = False) -> pl.Trainer:
         """Create callbacks and setup Trainer."""
         callbacks: list[Callback] = []
-        callbacks.append(GroupedMetricArtifactCollector())
         if self.reset_per_timeline:
             callbacks.append(ResetPerTimeline())
         if "confusion_matrix" in [metric.log_name for metric in self.metrics]:

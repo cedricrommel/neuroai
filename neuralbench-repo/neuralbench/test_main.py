@@ -26,7 +26,7 @@ from neuraltrain.metrics.metrics import GroupedMetric
 from neuraltrain.models.base import BaseModelConfig
 from neuraltrain.optimizers import LightningOptimizer
 
-from .callbacks import GroupedMetricArtifactCollector, WindowPredictionCollector
+from .callbacks import WindowPredictionCollector
 from .data import Data
 from .main import Experiment
 from .pl_module import BrainModule
@@ -96,7 +96,6 @@ def test_grouped_metric_logs_per_subject_summary_and_artifacts(
     module._trainer = SimpleNamespace(  # type: ignore[assignment]
         world_size=1,
         default_root_dir=str(tmp_path),
-        is_global_zero=True,
     )
     logged: dict[str, tp.Any] = {}
 
@@ -125,7 +124,6 @@ def test_grouped_metric_logs_per_subject_summary_and_artifacts(
     assert logged["test/test/mae_per_subject_subject_std"] == pytest.approx(6.7175144)
     assert logged["test/test/mae_per_subject_n_subjects"] == 2.0
 
-    GroupedMetricArtifactCollector().on_test_epoch_end(module.trainer, module)
     out_path = tmp_path / "per_subject_metrics" / "test__test__mae_per_subject.json"
     assert out_path.exists()
     payload = json.loads(out_path.read_text())
